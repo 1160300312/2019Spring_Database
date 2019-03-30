@@ -35,12 +35,12 @@ public class Lab2 {
 	
 	public List<String> inputHandler(String input){
 		List<String> result = new ArrayList<String>();
-		String reg = "company_query -q ([1-9]) -p ([a-zA-Z0-9 ]+)";
+		String reg = "company_query -q ([1-9]) -p ([[\u4e00-\u9fa5]{2,4}a-zA-Z0-9, ]+)";
 		Pattern p = Pattern.compile(reg);
 		Matcher m = p.matcher(input);
 		if(m.find()){
 			result.add(m.group(1));
-			String[] word = m.group(2).split(" ");
+			String[] word = m.group(2).split(",");
 			result.addAll(Arrays.asList(word));
 		}
 		return result;
@@ -84,11 +84,11 @@ public class Lab2 {
 					+ "where employee.dno=department.dno and superssn in ("
 					+ "select essn "
 					+ "from employee "
-					+ "where employee.ename = '" + words.get(1) + "';";
+					+ "where employee.ename = '" + words.get(1) + "');";
 			break;
 		case "7":
 			input += "select employee.essn "
-					+ "from emoloyee,works_on "
+					+ "from employee,works_on "
 					+ "where employee.essn=works_on.essn and works_on.pno='" + words.get(1) + "' and employee.essn in ("
 					+ "select employee.essn "
 					+ "from employee,works_on "
@@ -98,13 +98,13 @@ public class Lab2 {
 			input += "select department.dname "
 					+ "from employee,department "
 					+ "where employee.dno = department.dno "
-					+ "group by dno having avg(salary)<" + words.get(1) + ";";
+					+ "group by employee.dno having avg(salary)<" + words.get(1) + ";";
 			break;
 		case "9":
 			input += "select ename "
 					+ "from employee,works_on "
 					+ "where employee.essn=works_on.essn "
-					+ "group by pno having count(*) >=" + words.get(1) + " and sum(hours)<=" + words.get(2) + ";";
+					+ "group by employee.essn having count(*) >=" + words.get(1) + " and sum(hours)<=" + words.get(2) + ";";
 			break;
 		default:
 			System.out.println("input error");
