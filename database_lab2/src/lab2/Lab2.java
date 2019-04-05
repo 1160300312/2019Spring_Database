@@ -52,23 +52,29 @@ public class Lab2 {
 		case "1":
 			input += "select employee.essn "
 					+ "from employee,project,works_on "
-					+ "where employee.essn=works_on.essn and project.pno=works_on.pno and project.pno='" + words.get(1) + "';";
-			System.out.println(input);
+					+ "where employee.essn=works_on.essn and "
+					+ "project.pno=works_on.pno and "
+					+ "project.pno='" + words.get(1) + "';";
 			break;
 		case "2":
 			input += "select ename "
 					+ "from employee,project,works_on "
-					+ "where employee.essn=works_on.essn and project.pno=works_on.pno and pname='" + words.get(1) + "';";
+					+ "where employee.essn=works_on.essn "
+					+ "and project.pno=works_on.pno and "
+					+ "pname='" + words.get(1) + "';";
 			break;
 		case "3":
 			input += "select ename,address "
 					+ "from department,employee "
-					+ "where employee.dno=department.dno and dname='" + words.get(1) + "';";
+					+ "where employee.dno=department.dno and "
+					+ "dname='" + words.get(1) + "';";
 			break;
 		case "4":
 			input += "select ename,address "
 					+ "from employee,department "
-					+ "where employee.dno=department.dno and dname='" + words.get(1) + "' and salary<"+words.get(2) + ";";
+					+ "where employee.dno=department.dno and "
+					+ "dname='" + words.get(1) + "' "
+					+ "and salary<"+words.get(2) + ";";
 			break;
 		case "5":
 			input += "select ename "
@@ -76,7 +82,8 @@ public class Lab2 {
 					+ "where essn not in ("
 					+ "select employee.essn "
 					+ "from employee,works_on "
-					+ "where employee.essn=works_on.essn and pno='" + words.get(1) + "');";
+					+ "where employee.essn=works_on.essn and "
+					+ "pno='" + words.get(1) + "');";
 			break;
 		case "6":
 			input += "select ename,dname "
@@ -89,10 +96,13 @@ public class Lab2 {
 		case "7":
 			input += "select employee.essn "
 					+ "from employee,works_on "
-					+ "where employee.essn=works_on.essn and works_on.pno='" + words.get(1) + "' and employee.essn in ("
+					+ "where employee.essn=works_on.essn "
+					+ "and works_on.pno='" + words.get(1) + "' "
+					+ "and employee.essn in ("
 					+ "select employee.essn "
 					+ "from employee,works_on "
-					+ "where employee.essn=works_on.essn and works_on.pno='" + words.get(2) + "');";
+					+ "where employee.essn=works_on.essn and "
+					+ "works_on.pno='" + words.get(2) + "');";
 			break;
 		case "8":
 			input += "select department.dname "
@@ -104,7 +114,8 @@ public class Lab2 {
 			input += "select ename "
 					+ "from employee,works_on "
 					+ "where employee.essn=works_on.essn "
-					+ "group by employee.essn having count(*) >=" + words.get(1) + " and sum(hours)<=" + words.get(2) + ";";
+					+ "group by employee.essn having count(*) >=" + words.get(1) + " "
+					+ "and sum(hours)<=" + words.get(2) + ";";
 			break;
 		default:
 			System.out.println("input error");
