@@ -2,6 +2,8 @@ package lab3;
 
 import java.sql.Connection;
 import java.sql.DriverManager;
+import java.sql.PreparedStatement;
+import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.Scanner;
 
@@ -68,37 +70,34 @@ public class Lab3 {
 		String input = "";
 		int flag = 0;
 		while(flag == 0){
+			input = "";
 			switch(choice){
 			case "1":
-				System.out.print("输入要查询学生的姓名：");
+				System.out.println("输入要查询学生的姓名：");
 				String input1 = in.nextLine();
 				input = "select * "
 						+ "from student "
 						+ "where name = '" + input + "';";
-				choice = in.nextLine();
 				break;
 			case "2":
-				System.out.print("输入要查询的教师的姓名：");
+				System.out.println("输入要查询的教师的姓名：");
 				String input2 = in.nextLine();
 				input = "select student.name "
 						+ "from student,mentor "
 						+ "where student.mno = mentor.mno and mentor.name = '" + input + "';";
-				choice = in.nextLine();
 				break;
 			case "3":
-				System.out.print("输入要查询的公寓的名字：");
+				System.out.println("输入要查询的公寓的名字：");
 				String input3 = in.nextLine();
 				input = "select check_data,evaluation "
 						+ "from checks "
 						+ "where checke.dorm_name= '" + input3 + "';";
-				choice = in.nextLine();
 				break;
 			case "4":
 				input = "select student.sno,count(*) "
 						+ "from student,elective_list "
 						+ "where student.sno = elective_list.sno "
 						+ "group by student.sno";
-				choice = in.nextLine();
 				break;
 			case "5":
 				System.out.println("输入课程的号：");
@@ -109,7 +108,6 @@ public class Lab3 {
 						+ "select student.cno "
 						+ "from student,elective_list "
 						+ "where student.cno=elective_list.cno and elective.sno = '" + input5 + "');";
-				choice = in.nextLine();
 				break;
 			case "..":
 				this.show_menu();
@@ -117,8 +115,30 @@ public class Lab3 {
 				break;
 			default:
 				System.out.println("无法识别的输入！");
-				choice = in.nextLine();
 				break;
+			}
+			if(!input.equals("")){
+				try {
+					PreparedStatement ps = this.con.prepareStatement(input);
+					ResultSet rs = ps.executeQuery();
+					int count = rs.getMetaData().getColumnCount();
+					while(rs.next()){
+						for(int i=1;i<=count;i++){
+							System.out.print(rs.getString(i));
+							if(i<count){
+								System.out.print(",");
+							}
+						}
+						System.out.println();
+					}
+				} catch (SQLException e) {
+					// TODO Auto-generated catch block
+					e.printStackTrace();
+				}
+
+			}
+			if(!choice.equals("..")){
+				choice = in.nextLine();
 			}
 		}
 	}
@@ -128,32 +148,30 @@ public class Lab3 {
 		String input = "";
 		int flag = 0;
 		while(flag == 0){
+			input = "";
 			switch(choice){
 			case "1":
-				System.out.print("输入要删除学生的学号：");
+				System.out.println("输入要删除学生的学号：");
 				String input1 = in.nextLine();
 				input = "delete "
 						+ "from student "
-						+ "where student.sno = '" + input + "';";
-				choice = in.nextLine();
+						+ "where student.sno = '" + input1 + "';";
 				break;
 			case "2":
-				System.out.print("输入要删除的学生学号和课程号：");
+				System.out.println("输入要删除的学生学号和课程号：");
 				String input2 = in.nextLine();
 				String[] words2 = input.split(" ");
 				input = "delete "
 						+ "from elective_list "
 						+ "where sno = '" + words2[0] + "' and cno = '" + words2[1] + "';";
-				choice = in.nextLine();
 				break;
 			case "3":
-				System.out.print("输入日期和公寓名：");
+				System.out.println("输入日期和公寓名：");
 				String input3 = in.nextLine();
 				String[] words3 = input.split(" ");
 				input = "delete "
 						+ "from checks "
 						+ "where data = '" + words3[0] + "' and dorm_name = '" + words3[1] + "';";
-				choice = in.nextLine();
 				break;
 			case "..":
 				this.show_menu();
@@ -161,8 +179,24 @@ public class Lab3 {
 				break;
 			default:
 				System.out.println("无法识别的输入！");
-				choice = in.nextLine();
 				break;
+			}
+			if(!input.equals("")){
+				System.out.println(input);
+				try {
+					PreparedStatement ps = this.con.prepareStatement(input);
+					ps.execute();
+				} catch (SQLException e) {
+					// TODO Auto-generated catch block
+					System.out.println(e.getMessage());
+					if(e.getMessage().matches(".*Cannot delete or update a parent row.*")){
+						System.out.println("删除失败，存在外键依赖与该记录的主键");
+					}
+				}
+
+			}
+			if(!choice.equals("..")){
+				choice = in.nextLine();
 			}
 		}
 	}
@@ -172,15 +206,20 @@ public class Lab3 {
 		String input = "";
 		int flag = 0;
 		while(flag == 0){
+			input = "";
 			switch(choice){
 			case "1":
-				System.out.print("输入学生学号和课程号：");
+				System.out.println("输入学生学号和课程号：");
 				String input1 = in.nextLine();
 				String[] words1 = input1.split(" ");
 				input = "insert "
 						+ "into elective_list "
 						+ "values('" + words1[0] + "','" + words1[1] + "');";
-				choice = in.nextLine();
+				if(words1[0].equals("null")||words1[1].equals("null")){
+					input = "insert "
+							+ "into elective_list "
+							+ "values(" + "null" + ",'" + words1[1] + "');";
+				}
 				break;
 			case "2":
 				System.out.println("请依次输入检查员编号，公寓名，日期和评价");
@@ -188,8 +227,12 @@ public class Lab3 {
 				String[] words2 = input2.split(" ");
 				input = "insert "
 						+ "into checks "
-						+ "values('" + words2[0] + "','" + words2[1] + "','" + words2[2] + "','" + words2[3] + "')";
-				choice = in.nextLine();
+						+ "values('" + words2[0] + "','" + words2[1] + "','" + words2[2] + "','" + words2[3] + "');";
+				if(words2[0].equals("null")||words2[1].equals("null")){
+					input = "insert "
+							+ "into checks "
+							+ "values(" + "null"+ ",'" + words2[1] + "','" + words2[2] + "','" + words2[3] + "');";
+				}
 				break;
 			case "3":
 				System.out.println("输入学生学号和指导老师编号");
@@ -198,10 +241,19 @@ public class Lab3 {
 				input = "update student "
 						+ "set mno = '" + words3[1] + "' "
 						+ "where student.sno = '" + words3[0] + "';";
-				choice = in.nextLine(); 
 				break;
 			case "4":
-				choice = in.nextLine();
+				System.out.println("请依次输入学生学号，姓名，家庭住址，出生日期和指导教师编号");
+				String input4 = in.nextLine();
+				String[] words4 = input4.split(" ");
+				input = "insert "
+						+ "into student "
+						+ "values('" + words4[0] + "','" + words4[1] + "','" + words4[2] + "','" + words4[3] + "','" + words4[4] + "');";
+				if(words4[0].equals("null")){
+					input = "insert "
+							+ "into student "
+							+ "values(" + words4[0] + ",'" + words4[1] + "','" + words4[2] + "','" + words4[3] + "','" + words4[4] + "');";
+				}
 				break;
 			case "..":
 				this.show_menu();
@@ -209,8 +261,29 @@ public class Lab3 {
 				break;
 			default:
 				System.out.println("无法识别的输入！");
-				choice = in.nextLine();
 				break;
+			}
+			if(!input.equals("")){
+				try {
+					System.out.println(input);  //////
+					PreparedStatement ps = this.con.prepareStatement(input);
+					ps.execute();
+				} catch (SQLException e) {
+					// TODO Auto-generated catch block
+					System.out.println(e.getMessage());
+					if(e.getMessage().matches(".*cannot be null.*")){
+						System.out.println("插入失败，主键不能为空");
+					}
+					if(e.getMessage().matches(".*Duplicate entry.*")){
+						System.out.println("插入失败，主键存在冲突值");
+					}
+					if(e.getMessage().matches(".*a foreign key constraint fails.*")){
+						System.out.println("插入失败，外键对应的主键不存在");
+					}
+				}
+			}
+			if(!choice.equals("..")){
+				choice = in.nextLine();
 			}
 		}
 	}
