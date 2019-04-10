@@ -39,6 +39,7 @@ public class Lab3 {
 			System.out.println("3.查询某公寓检查评价情况");
 			System.out.println("4.查询每个学生选修的课程的数量");
 			System.out.println("5.查询没有选择某门课的学生姓名");
+			System.out.println("6.通过姓名查询某个学生的所有亲属及联系方式");
 			String choice2 = s.nextLine();
 			this.inquire(choice2);
 			break;
@@ -77,21 +78,21 @@ public class Lab3 {
 				String input1 = in.nextLine();
 				input = "select * "
 						+ "from student "
-						+ "where name = '" + input + "';";
+						+ "where name = '" + input1 + "';";
 				break;
 			case "2":
 				System.out.println("输入要查询的教师的姓名：");
 				String input2 = in.nextLine();
-				input = "select student.name "
-						+ "from student,mentor "
-						+ "where student.mno = mentor.mno and mentor.name = '" + input + "';";
+				input = "select sm.sname "
+						+ "from student_mentor sm "
+						+ "where sm.mname =  '" + input2 + "';";
 				break;
 			case "3":
 				System.out.println("输入要查询的公寓的名字：");
 				String input3 = in.nextLine();
-				input = "select check_data,evaluation "
+				input = "select check_date,evaluation "
 						+ "from checks "
-						+ "where checke.dorm_name= '" + input3 + "';";
+						+ "where checks.dorm_name= '" + input3 + "';";
 				break;
 			case "4":
 				input = "select student.sno,count(*) "
@@ -104,10 +105,17 @@ public class Lab3 {
 				String input5 = in.nextLine();
 				input = "select student.name "
 						+ "from student "
-						+ "where cno not in ("
-						+ "select student.cno "
+						+ "where sno not in ("
+						+ "select student.sno "
 						+ "from student,elective_list "
-						+ "where student.cno=elective_list.cno and elective.sno = '" + input5 + "');";
+						+ "where student.sno=elective_list.sno and elective_list.cno = '" + input5 + "');";
+				break;
+			case "6":
+				System.out.println("输入学生姓名：");
+				String input6 = in.nextLine();
+				input = "select fam.relation,fam.number "
+						+ "from student_family fam "
+						+ "where fam.sname = '" + input6 + "';";
 				break;
 			case "..":
 				this.show_menu();
@@ -117,6 +125,7 @@ public class Lab3 {
 				System.out.println("无法识别的输入！");
 				break;
 			}
+//			System.out.println(input);
 			if(!input.equals("")){
 				try {
 					PreparedStatement ps = this.con.prepareStatement(input);
@@ -168,10 +177,10 @@ public class Lab3 {
 			case "3":
 				System.out.println("输入日期和公寓名：");
 				String input3 = in.nextLine();
-				String[] words3 = input.split(" ");
+				String[] words3 = input3.split(" ");
 				input = "delete "
 						+ "from checks "
-						+ "where data = '" + words3[0] + "' and dorm_name = '" + words3[1] + "';";
+						+ "where check_date = '" + words3[0] + "' and dorm_name = '" + words3[1] + "';";
 				break;
 			case "..":
 				this.show_menu();
@@ -209,7 +218,7 @@ public class Lab3 {
 			input = "";
 			switch(choice){
 			case "1":
-				System.out.println("输入学生学号和课程号：");
+				System.out.println("输入学生课程号和学号：");
 				String input1 = in.nextLine();
 				String[] words1 = input1.split(" ");
 				input = "insert "
