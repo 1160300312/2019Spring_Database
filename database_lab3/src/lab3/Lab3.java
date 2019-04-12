@@ -40,6 +40,7 @@ public class Lab3 {
 			System.out.println("4.查询每个学生选修的课程的数量");
 			System.out.println("5.查询没有选择某门课的学生姓名");
 			System.out.println("6.通过姓名查询某个学生的所有亲属及联系方式");
+			System.out.println("7.查询所有员工的情况");
 			String choice2 = s.nextLine();
 			this.inquire(choice2);
 			break;
@@ -55,6 +56,7 @@ public class Lab3 {
 			System.out.println("2.添加一次公寓检查记录");
 			System.out.println("3.为某学生更换指导老师");
 			System.out.println("4.添加学生");
+			System.out.println("5.插入一条员工记录");
 			String choice4 = s.nextLine();
 			this.insert(choice4);
 			break;
@@ -116,6 +118,10 @@ public class Lab3 {
 				input = "select fam.relation,fam.number "
 						+ "from student_family fam "
 						+ "where fam.sname = '" + input6 + "';";
+				break;
+			case "7":
+				input = "select* "
+						+ "from manager";
 				break;
 			case "..":
 				this.show_menu();
@@ -191,13 +197,13 @@ public class Lab3 {
 				break;
 			}
 			if(!input.equals("")){
-				System.out.println(input);
+//				System.out.println(input);
 				try {
 					PreparedStatement ps = this.con.prepareStatement(input);
 					ps.execute();
 				} catch (SQLException e) {
 					// TODO Auto-generated catch block
-					System.out.println(e.getMessage());
+//					System.out.println(e.getMessage());
 					if(e.getMessage().matches(".*Cannot delete or update a parent row.*")){
 						System.out.println("删除失败，存在外键依赖与该记录的主键");
 					}
@@ -264,6 +270,14 @@ public class Lab3 {
 							+ "values(" + words4[0] + ",'" + words4[1] + "','" + words4[2] + "','" + words4[3] + "','" + words4[4] + "');";
 				}
 				break;
+			case "5":
+				System.out.println("请一次输入员工职位，员工号，姓名，电话和薪水");
+				String input5 = in.nextLine();
+				String[] words5 = input5.split(" ");
+				input = "insert "
+						+ "into manager "
+						+ "values('" + words5[0] + "','" + words5[1] + "','" + words5[2] + "','" + words5[3] + "'," + words5[4] + ");";
+				break;
 			case "..":
 				this.show_menu();
 				flag = 1;
@@ -274,12 +288,12 @@ public class Lab3 {
 			}
 			if(!input.equals("")){
 				try {
-					System.out.println(input);  //////
+//					System.out.println(input);  //////
 					PreparedStatement ps = this.con.prepareStatement(input);
 					ps.execute();
 				} catch (SQLException e) {
 					// TODO Auto-generated catch block
-					System.out.println(e.getMessage());
+//					System.out.println(e.getMessage());
 					if(e.getMessage().matches(".*cannot be null.*")){
 						System.out.println("插入失败，主键不能为空");
 					}
