@@ -612,17 +612,22 @@ void nextLoopJoin(unsigned start1, unsigned start2, unsigned write_start, Buffer
 		next2 = record_start2;
 	}
 
-	freeBlockInBuffer(new_blk, &buf);
-
 	int empty = 0;
-	new_blk = readBlockFromDisk(write_start - 1, &buf);
-	for (int i = write_count;i < 5;i++) {
-		memcpy(new_blk + 12 * i, &empty, 4);
-		memcpy(new_blk + 12 * i + 4, &empty, 4);
-		memcpy(new_blk + 12 * i + 8, &empty, 4);
+	if (write_count == 0) {
+		freeBlockInBuffer(new_blk, &buf);
+		new_blk = readBlockFromDisk(write_start - 1, &buf);
+		memcpy(new_blk + 60, &empty, 4);
+		writeBlockToDisk(new_blk, write_start - 1, &buf);
 	}
-	memcpy(new_blk + 60, &empty, 4);
-	writeBlockToDisk(new_blk, write_start - 1, &buf);
+	else {
+		memcpy(new_blk + 60, &empty, 4);
+		for (int i = write_count;i < 5;i++) {
+			memcpy(new_blk + 12 * i, &empty, 4);
+			memcpy(new_blk + 12 * i + 4, &empty, 4);
+			memcpy(new_blk + 12 * i + 8, &empty, 4);
+		}
+		writeBlockToDisk(new_blk, write_start, &buf);
+	}
 }
 
 void readJoinResult(int start, Buffer buf) {
@@ -642,6 +647,342 @@ void readJoinResult(int start, Buffer buf) {
 		freeBlockInBuffer(blk, &buf);
 	}
 }
+
+void sortMergeJoin(unsigned start1, unsigned start2, unsigned write_start, Buffer buf) {
+	int* data1 = new int[14 * 2]; //存放关系R中的相同数据
+	int* data2 = new int[14 * 2]; //存放关系S中的相同数据
+
+	unsigned char* blk1 = readBlockFromDisk(start1, &buf); //读取关系R的块
+	unsigned char* blk2 = readBlockFromDisk(start2, &buf); //读取关系S的块
+	unsigned char* new_blk = getNewBlockInBuffer(&buf);
+	int count_write = 0;
+	int count1 = 0; 
+	int count2 = 0; //计算已经读到块里的哪个位置
+	int count_index1 = 0;
+	int count_index2 = 0;  //记录已经写到了那个位置
+	int current1; 
+	int current2;
+	while (start1 != 0 && start2 != 0) {
+		if (count1 == 7) {
+			memcpy(&start1, blk1 + 56, 4);
+			freeBlockInBuffer(blk1, &buf);
+			if (start1 == 0) {
+				break;
+			}
+			else {
+				blk1 = readBlockFromDisk(start1, &buf);
+				count1 = 0;
+			}
+		}
+		memcpy(&current1, blk1 + count1 * 8, 4);
+		memcpy(data1, blk1 + count1 * 8, 8);
+		count1++;
+		count_index1++;
+		while (true) {
+			if (count1 == 7) {
+				memcpy(&start1, blk1 + 56, 4);
+				freeBlockInBuffer(blk1, &buf);
+				if (start1 == 0) {
+					break;
+				}
+				else {
+					blk1 = readBlockFromDisk(start1, &buf);
+					count1 = 0;
+				}
+			}
+			int temp = current1;
+			memcpy(&current1, blk1 + count1 * 8, 4);
+			if (temp == current1) {
+				memcpy(data1 + count_index1 * 2, blk1 + count1 * 8, 8);
+				count1++;
+				count_index1++;
+			}
+			else {
+				memcpy(&current1, &temp, 4);
+				break;
+			}
+		}
+
+		if (count2 == 7) {
+			memcpy(&start2, blk2 + 56, 4);
+			freeBlockInBuffer(blk2, &buf);
+			if (start2 == 0) {
+				break;
+			}
+			else {
+				blk2 = readBlockFromDisk(start2, &buf);
+				count2 = 0;
+			}
+		}
+		memcpy(&current2, blk2 + count2 * 8, 4);
+		count2++;
+		while (current2 < current1) {
+			if (count2 == 7) {
+				memcpy(&start2, blk2 + 56, 4);
+				freeBlockInBuffer(blk2, &buf);
+				if (start2 == 0) {
+					break;
+				}
+				else {
+					blk2 = readBlockFromDisk(start2, &buf);
+					count2 = 0;
+				}
+			}
+			memcpy(&current2, blk2 + count2 * 8, 4);
+			count2++;
+		}
+		
+		count2--;
+		while (current2 == current1) {
+			memcpy(data2 + count_index2 * 2, blk2 + count2 * 8, 8);
+			count2++;
+			count_index2++;
+			if (count2 == 7) {
+				memcpy(&start2, blk2 + 56, 4);
+				freeBlockInBuffer(blk2, &buf);
+				if (start2 == 0) {
+					break;
+				}
+				else {
+					blk2 = readBlockFromDisk(start2, &buf);
+					count2 = 0;
+				}
+			}
+			memcpy(&current2, blk2 + count2 * 8, 4);
+		}
+
+		if (count_index2 != 0) {
+			for (int i = 0;i < count_index1;i++) {
+				for (int j = 0;j < count_index2;j++) {
+					memcpy(new_blk + count_write * 12, data1 + i * 2, 4);
+					memcpy(new_blk + count_write * 12 + 4, data1 + i * 2 + 1, 4);
+					memcpy(new_blk + count_write * 12 + 8, data2 + j * 2 + 1, 4);
+					count_write++;
+					if (count_write == 5) {
+						write_start++;
+						memcpy(new_blk + 60, &write_start, 4);
+						writeBlockToDisk(new_blk, write_start - 1, &buf);
+						new_blk = getNewBlockInBuffer(&buf);
+						count_write = 0;
+					}
+				}
+			}
+		}
+		count_index1 = 0;
+		count_index2 = 0;
+	}
+	unsigned empty = 0;
+	if (count_write == 0) {
+		int t = write_start - 1;
+		freeBlockInBuffer(new_blk, &buf);
+		new_blk = readBlockFromDisk(t, &buf);
+		memcpy(new_blk + 60, &empty, 4);
+		writeBlockToDisk(new_blk, t, &buf);
+	}
+	else {
+		memcpy(new_blk + 60, &empty, 4);
+		for (int i = count_write;i < 5;i++) {
+			memcpy(new_blk + 12 * i, &empty, 4);
+			memcpy(new_blk + 12 * i + 4, &empty, 4);
+			memcpy(new_blk + 12 * i + 8, &empty, 4);
+		}
+		writeBlockToDisk(new_blk, write_start, &buf);
+	}
+}
+
+
+//定义的hash函数为 data mod 8
+void hashHandler(unsigned start1, unsigned start2, unsigned hash_start1, unsigned hash_start2, Buffer buf) {
+	unsigned char* blk;
+	unsigned char* write_blk;
+	int* data = new int[14];
+	int count_init = 1;
+	int zero = 0;
+	while (start1 != 0) {
+		blk = readBlockFromDisk(start1, &buf);
+		memcpy(data, blk, 56);
+		memcpy(&start1, blk + 56, 4);
+		int hash;
+		for (int i = 0;i < 7;i++) {
+			hash = (data[i * 2] % 8) * 10 + hash_start1;
+			if ((write_blk = readBlockFromDisk(hash, &buf)) == NULL) {
+				write_blk = getNewBlockInBuffer(&buf);
+				memcpy(write_blk, data + i * 2, 8);
+				memcpy(write_blk + 60, &count_init, 4);
+				writeBlockToDisk(write_blk, hash, &buf);
+			}
+			else {
+				int count;
+				memcpy(&count, write_blk + 60, 4);
+				while (count == 7) {
+					freeBlockInBuffer(write_blk, &buf);
+					hash++;
+					write_blk = readBlockFromDisk(hash, &buf);
+					memcpy(&count, write_blk + 60, 4);
+				}
+				memcpy(write_blk + 8 * count, data + i * 2, 8);
+				count++;
+				if (count == 7) {
+					int temp = hash + 1;
+					memcpy(write_blk + 56, &temp, 4);
+					memcpy(write_blk + 60, &count, 4);
+					writeBlockToDisk(write_blk, hash, &buf);
+					write_blk = getNewBlockInBuffer(&buf);
+					memcpy(write_blk + 60, &zero, 4);
+					writeBlockToDisk(write_blk, temp, &buf);
+				}
+				else {
+					memcpy(write_blk + 60, &count, 4);
+					writeBlockToDisk(write_blk, hash, &buf);
+				}
+			}
+		}
+		freeBlockInBuffer(blk, &buf);
+	}
+
+	int count;
+	for (int i = 0;i < 8;i++) {
+		int temp = i * 10;
+		write_blk = readBlockFromDisk(temp + hash_start1, &buf);
+		memcpy(&count, write_blk + 60, 4);
+		while (count == 7) {
+			freeBlockInBuffer(write_blk, &buf);
+			temp++;
+			write_blk = readBlockFromDisk(temp + hash_start1, &buf);
+			memcpy(&count, write_blk + 60, 4);
+		}
+		memcpy(write_blk + 56, &zero, 4);
+		for (int j = count;j < 7;j++) {
+			memcpy(write_blk + 8 * j, &zero, 4);
+			memcpy(write_blk + 8 * j + 4, &zero, 4);
+		}
+		writeBlockToDisk(write_blk, temp + hash_start1, &buf);
+	}
+
+	while (start2 != 0) {
+		blk = readBlockFromDisk(start2, &buf);
+		memcpy(data, blk, 56);
+		memcpy(&start2, blk + 56, 4);
+		int hash;
+		for (int i = 0;i < 7;i++) {
+			hash = (data[i * 2] % 8) * 10 + hash_start2;
+			if ((write_blk = readBlockFromDisk(hash, &buf)) == NULL) {
+				write_blk = getNewBlockInBuffer(&buf);
+				memcpy(write_blk, data + i * 2, 8);
+				memcpy(write_blk + 60, &count_init, 4);
+				writeBlockToDisk(write_blk, hash, &buf);
+			}
+			else {
+				int count;
+				memcpy(&count, write_blk + 60, 4);
+				while (count == 7) {
+					freeBlockInBuffer(write_blk, &buf);
+					hash++;
+					write_blk = readBlockFromDisk(hash, &buf);
+					memcpy(&count, write_blk + 60, 4);
+				}
+				memcpy(write_blk + 8 * count, data + i * 2, 8);
+				count++;
+				if (count == 7) {
+					int temp = hash + 1;
+					memcpy(write_blk + 56, &temp, 4);
+					memcpy(write_blk + 60, &count, 4);
+					writeBlockToDisk(write_blk, hash, &buf);
+					write_blk = getNewBlockInBuffer(&buf);
+					memcpy(write_blk + 60, &zero, 4);
+					writeBlockToDisk(write_blk, temp, &buf);
+				}
+				else {
+					memcpy(write_blk + 60, &count, 4);
+					writeBlockToDisk(write_blk, hash, &buf);
+				}
+			}
+		}
+		freeBlockInBuffer(blk, &buf);
+	}
+	for (int i = 0;i < 8;i++) {
+		int temp = i * 10;
+		write_blk = readBlockFromDisk(temp + hash_start2, &buf);
+		memcpy(&count, write_blk + 60, 4);
+		while (count == 7) {
+			freeBlockInBuffer(write_blk, &buf);
+			temp++;
+			write_blk = readBlockFromDisk(temp + hash_start2, &buf);
+			memcpy(&count, write_blk + 60, 4);
+		}
+		memcpy(write_blk + 56, &zero, 4);
+		for (int j = count;j < 7;j++) {
+			memcpy(write_blk + 8 * j, &zero, 4);
+			memcpy(write_blk + 8 * j + 4, &zero, 4);
+		}
+		writeBlockToDisk(write_blk, temp + hash_start2, &buf);
+	}
+
+}
+
+void joinHandler(unsigned start1, unsigned start2, unsigned write_start, Buffer buf) {
+	unsigned char* blk1;
+	unsigned char* blk2;
+	int* data1 = new int[14];
+	int* data2 = new int[14];
+	int count = 0;
+	unsigned char* new_blk = getNewBlockInBuffer(&buf);
+	for (int i = 0;i < 8;i++) {
+		int read_start1 = start1 + i * 10;
+		while (read_start1 != 0) {
+			blk1 = readBlockFromDisk(read_start1, &buf);
+			memcpy(data1, blk1, 56);
+			memcpy(&read_start1, blk1 + 56, 4);
+			int read_start2 = start2 + i * 10;
+			while (read_start2 != 0) {
+				blk2 = readBlockFromDisk(read_start2, &buf);
+				memcpy(data2, blk2, 56);
+				memcpy(&read_start2, blk2 + 56, 4);
+				for (int m = 0;m < 7;m++) {
+					if (data1[m * 2] != 0) {
+						for (int n = 0;n < 7;n++) {
+							if (data1[m * 2] == data2[n * 2]) {
+								memcpy(new_blk + count * 12, data1 + m * 2, 8);
+								memcpy(new_blk + count * 12 + 8, data2 + m * 2 + 1, 4);
+								count++;
+								if (count == 5) {
+									write_start++;
+									memcpy(new_blk + 60, &write_start, 4);
+									writeBlockToDisk(new_blk, write_start - 1, &buf);
+									new_blk = getNewBlockInBuffer(&buf);
+									count = 0;
+								}
+							}
+						}
+					}
+				}
+				memcpy(&read_start2, blk2 + 56, 4);
+				freeBlockInBuffer(blk2, &buf);
+			}
+			memcpy(&read_start1, blk1 + 56, 4);
+			freeBlockInBuffer(blk1, &buf);
+		}
+	}
+
+	unsigned empty = 0;
+	if (count == 0) {
+		int t = write_start - 1;
+		freeBlockInBuffer(new_blk, &buf);
+		new_blk = readBlockFromDisk(t, &buf);
+		memcpy(new_blk + 60, &empty, 4);
+		writeBlockToDisk(new_blk, t, &buf);
+	}
+	else {
+		memcpy(new_blk + 60, &empty, 4);
+		for (int i = count;i < 5;i++) {
+			memcpy(new_blk + 12 * i, &empty, 4);
+			memcpy(new_blk + 12 * i + 4, &empty, 4);
+			memcpy(new_blk + 12 * i + 8, &empty, 4);
+		}
+		writeBlockToDisk(new_blk, write_start, &buf);
+	}
+}
+
 
 
 int main()
@@ -668,9 +1009,9 @@ int main()
 
 	//leanerSearch(buf, 1, 17, 100);
 
-	//readBlock(20, buf);
+	//readBlock(750, buf);
 
-	//readContinuedBlock(400, buf);
+	//readContinuedBlock(1000, buf);
 
 	//mergeSort(17, buf, 300);
 
@@ -680,7 +1021,13 @@ int main()
 
 	//nextLoopJoin(1, 17, 600, buf);
 	
-	readJoinResult(600, buf);
+	readJoinResult(1000, buf);
+
+	//sortMergeJoin(216, 332, 700, buf);
+
+	//hashHandler(1, 17, 800, 900, buf);
+
+	//joinHandler(800, 900, 1000, buf);
 }
 
 
